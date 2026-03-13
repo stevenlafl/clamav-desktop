@@ -67,7 +67,7 @@ This roadmap is not set in stone and is prone to change unexpectedly while we're
 - [x] Scanner: Folders selection
 - [x] Scanner: Scan interruption
 - [x] Settings: Raw clamd.conf editor 
-- [ ] Technical: Releases in `.x64.deb`, `.x64.dmg`, and `.x64.msi` formats
+- [x] Technical: Releases in `.x64.deb`, `.x64.dmg`, and `.x64.msi` formats
 
 #### v.0.5.0
 
