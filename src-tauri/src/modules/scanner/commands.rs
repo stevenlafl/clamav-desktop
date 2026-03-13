@@ -1,5 +1,5 @@
 use filer;
-use std::{str, sync};
+use std::{str, sync, time::Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 
@@ -40,20 +40,22 @@ pub async fn start_scanner(app_handle: AppHandle, paths: Vec<String>) -> Result<
     )
     .await;
 
-    // Recursively count all the non-directory files within the selected paths
-    let total_file_count = paths
+    // Recursively count all the non-directory files within the selected paths and sum their sizes
+    let (total_file_count, total_bytes) = paths
         .to_owned()
         .into_iter()
-        .map(|path| filer::file_list::count(true, Some(path), Some(filer::types::FileKind::File)))
-        .sum::<usize>();
-    debug!("start_scanner()", "Number of files to scan: {}.", total_file_count);
+        .map(|path| filer::file_list::count_and_bytes(true, Some(path), Some(filer::types::FileKind::File)))
+        .fold((0usize, 0u64), |(ac, ab), (c, b)| (ac + c, ab + b));
+    debug!(
+        "start_scanner()",
+        "Number of files to scan: {}. Total bytes: {}.", total_file_count, total_bytes
+    );
 
     state::set_public_state(
         &app_handle,
         state::ScannerPublicState {
-            current_path: None,
-            progress: None,
             step: state::ScannerStatusStep::Starting,
+            ..Default::default()
         },
     )
     .await;
@@ -108,6 +110,8 @@ pub async fn start_scanner(app_handle: AppHandle, paths: Vec<String>) -> Result<
     let app_handle_traveller = app_handle.clone();
     tauri::async_runtime::spawn(async move {
         let mut file_index: usize = 0;
+        let mut bytes_scanned: u64 = 0;
+        let scan_start_time = Instant::now();
         while let Some(event) = rx.recv().await {
             if let CommandEvent::Stdout(ref line) = event {
                 let line_as_str = str::from_utf8(&line).expect("Failed to convert `line` to string.");
@@ -115,8 +119,16 @@ pub async fn start_scanner(app_handle: AppHandle, paths: Vec<String>) -> Result<
                 debug!("start_scanner()", "{}", line_as_str);
 
                 if utils::filter_log(line_as_str.to_owned()) {
-                    let next_public_state =
-                        utils::get_status_from_log(line_as_str.to_owned(), file_index, total_file_count);
+                    let file_size = utils::get_file_size_from_log(line_as_str);
+                    bytes_scanned += file_size;
+                    let next_public_state = utils::get_status_from_log(
+                        line_as_str.to_owned(),
+                        file_index,
+                        total_file_count,
+                        bytes_scanned,
+                        total_bytes,
+                        scan_start_time,
+                    );
                     state::set_public_state(&app_handle_traveller, next_public_state).await;
 
                     file_index += 1;
@@ -129,8 +141,16 @@ pub async fn start_scanner(app_handle: AppHandle, paths: Vec<String>) -> Result<
                 error!("start_scanner()", "{}", line_as_str);
 
                 if utils::filter_log(line_as_str.to_owned()) {
-                    let next_public_state =
-                        utils::get_status_from_log(line_as_str.to_owned(), file_index, total_file_count);
+                    let file_size = utils::get_file_size_from_log(line_as_str);
+                    bytes_scanned += file_size;
+                    let next_public_state = utils::get_status_from_log(
+                        line_as_str.to_owned(),
+                        file_index,
+                        total_file_count,
+                        bytes_scanned,
+                        total_bytes,
+                        scan_start_time,
+                    );
                     state::set_public_state(&app_handle_traveller, next_public_state).await;
 
                     file_index += 1;
@@ -138,6 +158,7 @@ pub async fn start_scanner(app_handle: AppHandle, paths: Vec<String>) -> Result<
             }
         }
 
+        crate::libs::history::update_last_scan(false).await;
         state::set_public_state(&app_handle_traveller, state::ScannerPublicState::default()).await;
     });
 
@@ -163,9 +184,8 @@ pub async fn stop_scanner(app_handle: AppHandle, shared_state: State<'_, state::
         state::set_public_state(
             &app_handle,
             state::ScannerPublicState {
-                current_path: None,
-                progress: None,
                 step: state::ScannerStatusStep::Stopping,
+                ..Default::default()
             },
         )
         .await;

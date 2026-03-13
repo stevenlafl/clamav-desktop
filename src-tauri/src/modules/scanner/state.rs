@@ -23,6 +23,7 @@ pub struct ScannerPrivateState {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct ScannerPublicState {
     pub current_path: Option<String>,
+    pub estimated_seconds_remaining: Option<f64>,
     pub progress: Option<f64>,
     pub step: ScannerStatusStep,
 }
@@ -30,6 +31,10 @@ impl ScannerPublicState {
     pub fn patch(&mut self, patch: ScannerPublicStatePatch) {
         if let Some(current_path) = patch.current_path {
             self.current_path = current_path;
+        }
+
+        if let Some(estimated_seconds_remaining) = patch.estimated_seconds_remaining {
+            self.estimated_seconds_remaining = estimated_seconds_remaining;
         }
 
         if let Some(progress) = patch.progress {
@@ -65,6 +70,7 @@ pub enum ScannerStatusStep {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct ScannerPublicStatePatch {
     pub current_path: Option<Option<String>>,
+    pub estimated_seconds_remaining: Option<Option<f64>>,
     pub progress: Option<Option<f64>>,
     pub step: Option<ScannerStatusStep>,
 }

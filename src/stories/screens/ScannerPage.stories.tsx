@@ -68,6 +68,7 @@ export const Scanning: Story = {
       argsStore.updateArgs<ScannerScreenComponentProps>(ArgStoreKey.ScannerScreenComponent, {
         scannerState: {
           current_path: faker.system.filePath(),
+          estimated_seconds_remaining: null,
           progress,
           step: Core.ScannerStatusStep.Running,
         },
@@ -92,6 +93,7 @@ export const Scanning: Story = {
       onScanStop: () => goToScreen(Screen.Scanner),
       scannerState: {
         current_path: null,
+        estimated_seconds_remaining: null,
         progress: null,
         step: Core.ScannerStatusStep.Idle,
       },

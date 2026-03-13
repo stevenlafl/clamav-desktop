@@ -204,11 +204,21 @@ where
     FileList::new(filtered_pathbufs)
 }
 
-pub fn count<S>(is_recursive: bool, maybe_directory_path: Option<S>, maybe_file_kind: Option<types::FileKind>) -> usize
+pub fn count_and_bytes<S>(
+    is_recursive: bool,
+    maybe_directory_path: Option<S>,
+    maybe_file_kind: Option<types::FileKind>,
+) -> (usize, u64)
 where
     S: AsRef<str> + Display,
 {
-    let file_paths = list(is_recursive, maybe_directory_path, maybe_file_kind).into_strings();
+    let pathbufs = &list(is_recursive, maybe_directory_path, maybe_file_kind).pathbufs;
+    let count = pathbufs.len();
+    let bytes: u64 = pathbufs
+        .iter()
+        .filter_map(|p| std::fs::metadata(p).ok())
+        .map(|m| m.len())
+        .sum();
 
-    file_paths.len()
+    (count, bytes)
 }

@@ -9,7 +9,7 @@ import numeral from 'numeral'
 import { MdClose, MdVerifiedUser } from 'react-icons/md'
 import styled from 'styled-components'
 import type { Promisable } from 'type-fest'
-import { shrinkPath } from './utils'
+import { formatTimeRemaining, shrinkPath } from './utils'
 
 export type ScannerScreenComponentProps = Readonly<{
   canScan: boolean
@@ -42,6 +42,10 @@ export function ScannerScreenComponent({
 
           {scannerState.progress && <> ({numeral(scannerState.progress).format('0.00%')})</>}
         </ScanningStepText>
+        {scannerState.estimated_seconds_remaining != null &&
+          scannerState.step === Scanner.ScannerStatusStep.Running && (
+            <ScanningEtaText>{formatTimeRemaining(scannerState.estimated_seconds_remaining)}</ScanningEtaText>
+          )}
         {scannerState.current_path && <ScanningTargetText>{shrinkPath(scannerState.current_path)}</ScanningTargetText>}
       </ScreenBox>
     )
@@ -91,6 +95,12 @@ const ScanningCancelButton = styled.button`
   * {
     cursor: pointer;
   }
+`
+
+const ScanningEtaText = styled.p`
+  font-size: 87.5%;
+  margin-top: 8px;
+  opacity: 0.6;
 `
 
 const ScanningStepText = styled.p`

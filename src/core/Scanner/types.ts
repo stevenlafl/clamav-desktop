@@ -1,6 +1,7 @@
 export namespace Scanner {
   export interface State {
     current_path: string | null
+    estimated_seconds_remaining: number | null
     progress: number | null
     step: ScannerStatusStep
   }
