@@ -125,6 +125,7 @@ pub async fn start_cloud_update(app_handle: AppHandle) -> Result<(), ()> {
             }
         }
 
+        crate::libs::history::update_last_cloud_update().await;
         state::set_public_state(
             &app_handle,
             state::CloudPublicState {

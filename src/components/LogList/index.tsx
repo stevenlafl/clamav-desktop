@@ -1,3 +1,5 @@
+import { writeText } from '@tauri-apps/plugin-clipboard-manager'
+import { useCallback } from 'react'
 import styled from 'styled-components'
 import type { Core } from '../../core/types'
 import { useDebouncedMemo } from '../../hooks/useDebouncedMemo'
@@ -10,7 +12,14 @@ export type LogListProps = Readonly<{
 export function LogList({ logs }: LogListProps) {
   const rowsProps = useDebouncedMemo(logs, getRowsPropsFromCoreLogs, 500)
 
-  return <Box>{rowsProps.map(Row)}</Box>
+  const handleCopy = useCallback(async () => {
+    const selection = window.getSelection()?.toString()
+    if (selection) {
+      await writeText(selection)
+    }
+  }, [])
+
+  return <Box onContextMenu={handleCopy}>{rowsProps.map(Row)}</Box>
 }
 
 const Box = styled.div`
@@ -20,9 +29,13 @@ const Box = styled.div`
   overflow-x: hidden;
   overflow-y: scroll;
   max-height: 140px;
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
 
   * {
-    cursor: text;
+    -webkit-user-select: text;
     user-select: text;
+    cursor: text;
   }
 `

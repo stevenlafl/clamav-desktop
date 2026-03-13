@@ -1,59 +1,42 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::fs;
-use walkdir::WalkDir;
 
+use crate::debug;
 use crate::error;
+use crate::globals;
 
 use super::*;
 
-#[cfg(target_os = "linux")]
-const DEFAULT_CLAMD_CONF_FILE_PATH: &str = "/etc/clamav/clamd.conf";
-#[cfg(target_os = "macos")]
-const DEFAULT_CLAMD_CONF_FILE_PATH: &str = "/usr/local/etc/clamav/clamd.conf";
-#[cfg(target_os = "windows")]
-const DEFAULT_CLAMD_CONF_FILE_PATH: &str = "C:\\ClamAV\\clamd.conf";
+const CLAMD_CONF_TEMPLATE: &str = include_str!("../../resources/clamd-1.4.0.conf");
 
 pub async fn get_clamd_conf_file_path() -> Option<String> {
-    let default_file_path = PathBuf::from(DEFAULT_CLAMD_CONF_FILE_PATH);
+    let config_dir = globals::CONFIG_DIRECTORY_PATH.lock().await.clone();
+    let clamd_conf_path = config_dir.join("clamd.conf");
 
-    if fs::metadata(&default_file_path)
-        .await
-        .map(|m| m.is_file())
-        .unwrap_or(false)
-    {
-        return default_file_path
-            .to_str()
-            .map(|file_path_as_str| file_path_as_str.to_string());
+    if clamd_conf_path.exists() {
+        return clamd_conf_path.to_str().map(|s| s.to_string());
     }
 
-    let search_result = tokio::task::spawn_blocking(|| {
-        let mut found_file_paths = Vec::new();
-        for entry in WalkDir::new("/").into_iter().filter_map(|e| e.ok()) {
-            if entry.file_name().to_string_lossy() == "clamd.conf" {
-                found_file_paths.push(entry.into_path());
-            }
-        }
-        found_file_paths
-    })
-    .await
-    .unwrap_or_else(|_| Vec::new());
+    debug!("get_clamd_conf_file_path()", "No clamd.conf found, creating default.");
 
-    match search_result.len() {
-        0 => {
-            error!("get_clamd_conf_file_path()", "No 'clamd.conf' files found.");
+    let local_data_dir = globals::LOCAL_DATA_DIRECTORY_PATH.lock().await.clone();
+    let database_dir = local_data_dir.to_str().unwrap_or("/var/lib/clamav");
 
-            None
-        }
-        1 => search_result
-            .into_iter()
-            .next()
-            .unwrap()
-            .to_str()
-            .map(|file_path_as_str| file_path_as_str.to_string()),
-        _ => {
-            error!("get_clamd_conf_file_path()", "Multiple 'clamd.conf' files found.");
+    let config_content = CLAMD_CONF_TEMPLATE.replace(
+        "#DatabaseDirectory /var/lib/clamav",
+        &format!("DatabaseDirectory {}", database_dir),
+    );
 
+    if let Err(e) = fs::create_dir_all(&config_dir).await {
+        error!("get_clamd_conf_file_path()", "Failed to create config directory: {}", e);
+        return None;
+    }
+
+    match fs::write(&clamd_conf_path, config_content).await {
+        Ok(_) => clamd_conf_path.to_str().map(|s| s.to_string()),
+        Err(e) => {
+            error!("get_clamd_conf_file_path()", "Failed to write clamd.conf: {}", e);
             None
         }
     }
@@ -63,21 +46,25 @@ pub async fn get_clamd_conf_file_path() -> Option<String> {
 pub async fn get_debug_clamd_conf_file_path() -> Option<String> {
     let debug_clamd_conf_file_path = dev::get_debug_clamd_conf_file_path();
 
-    if !Path::new(&debug_clamd_conf_file_path).exists() {
-        let maybe_clamd_conf_file_path = get_clamd_conf_file_path().await;
-        let debug_clamd_conf_file_source = match maybe_clamd_conf_file_path {
-            Some(clamd_conf_file_path) => fs::read_to_string(&clamd_conf_file_path)
-                .await
-                .expect(format!("Could not read from `{}`.", debug_clamd_conf_file_path).as_str()),
-            None => "".to_owned(),
-        };
-
-        fs::write(&debug_clamd_conf_file_path, debug_clamd_conf_file_source)
-            .await
-            .expect(format!("Could not write to `{}`.", debug_clamd_conf_file_path).as_str());
+    if Path::new(&debug_clamd_conf_file_path).exists() {
+        return Some(debug_clamd_conf_file_path);
     }
 
-    Some(debug_clamd_conf_file_path)
+    let local_data_dir = globals::LOCAL_DATA_DIRECTORY_PATH.lock().await.clone();
+    let database_dir = local_data_dir.to_str().unwrap_or("/var/lib/clamav");
+
+    let config_content = CLAMD_CONF_TEMPLATE.replace(
+        "#DatabaseDirectory /var/lib/clamav",
+        &format!("DatabaseDirectory {}", database_dir),
+    );
+
+    match fs::write(&debug_clamd_conf_file_path, config_content).await {
+        Ok(_) => Some(debug_clamd_conf_file_path),
+        Err(e) => {
+            error!("get_debug_clamd_conf_file_path()", "Failed to write debug clamd.conf: {}", e);
+            None
+        }
+    }
 }
 
 #[cfg(not(tarpaulin_include))]

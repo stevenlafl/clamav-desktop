@@ -55,7 +55,7 @@ installation.
 
 ### Mandatory Requirements
 
-- [Node.js v22](https://nodejs.org) or [nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- [Node.js v24](https://nodejs.org) or [nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 - [Yarn](https://yarnpkg.com/getting-started/install)
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Tauri v2 Prerequisities](https://v2.tauri.app/start/prerequisites/)

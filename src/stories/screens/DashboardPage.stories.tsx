@@ -39,6 +39,7 @@ export const Default: Story = {
     cloudState: undefined,
     daemonClientState: undefined,
     daemonLogs: undefined,
+    history: undefined,
     onStartCloudUpdate: noop,
   },
   play: async () => {
@@ -46,7 +47,9 @@ export const Default: Story = {
 
     argsStore.updateArgs<DashboardScreenComponentProps>(ArgStoreKey.DashboardScreenComponent, {
       daemonClientState: {
-        daemon_status: Core.DaemonStatus.Running,
+        is_ready: true,
+        logs: [],
+        status: Core.DashboardStatus.Running,
       },
       daemonLogs: FAKE_DAEMON_LOGS,
     })
@@ -56,6 +59,7 @@ export const Default: Story = {
       cloudState: undefined,
       daemonClientState: undefined,
       daemonLogs: undefined,
+      history: undefined,
       onStartCloudUpdate: noop,
     })
 

@@ -13,14 +13,22 @@ import { getCloudActionLabel } from './helpers'
 
 export type DashboardScreenComponentProps = Readonly<{
   cloudState: Cloud.State | undefined
-  onStartCloudUpdate: () => Promisable<void>
   daemonClientState: DaemonClient.State | undefined
   daemonLogs: Core.Log[] | undefined
+  history:
+    | {
+        lastCloudUpdate: string | null
+        lastFullScan: string | null
+        lastPartialScan: string | null
+      }
+    | undefined
+  onStartCloudUpdate: () => Promisable<void>
 }>
 export function DashboardScreenComponent({
   cloudState,
   daemonClientState,
   daemonLogs,
+  history,
   onStartCloudUpdate,
 }: DashboardScreenComponentProps) {
   const cloudActions: CardAction[] = [
@@ -62,15 +70,15 @@ export function DashboardScreenComponent({
           </KeyValueList.Row>
           <KeyValueList.Row>
             <KeyValueList.Key>Last full scan:</KeyValueList.Key>
-            <KeyValueList.Value>Never</KeyValueList.Value>
+            <KeyValueList.Value>{history?.lastFullScan ?? 'Never'}</KeyValueList.Value>
           </KeyValueList.Row>
           <KeyValueList.Row>
             <KeyValueList.Key>Last partial scan:</KeyValueList.Key>
-            <KeyValueList.Value>2024-09-13 16:37</KeyValueList.Value>
+            <KeyValueList.Value>{history?.lastPartialScan ?? 'Never'}</KeyValueList.Value>
           </KeyValueList.Row>
           <KeyValueList.Row>
             <KeyValueList.Key>Last cloud update:</KeyValueList.Key>
-            <KeyValueList.Value>2024-09-11 09:21</KeyValueList.Value>
+            <KeyValueList.Value>{history?.lastCloudUpdate ?? 'Never'}</KeyValueList.Value>
           </KeyValueList.Row>
         </KeyValueList>
       </Card>
@@ -84,7 +92,7 @@ export function DashboardScreenComponent({
         ]}
         gridArea="2 / 1 / 3 / 2"
         isCentered
-        isLoading={!daemonClientState || daemonClientState.daemon_status === Core.DaemonStatus.Unknown}
+        isLoading={!daemonClientState || daemonClientState.status === Core.DashboardStatus.Unknown}
         title="Daemon"
       >
         <MdDeveloperBoard color="gold" size={96} />

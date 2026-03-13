@@ -2,6 +2,8 @@ import type { Core } from '../types'
 
 export namespace DaemonClient {
   export interface State {
-    daemon_status: Core.DaemonStatus
+    is_ready: boolean
+    logs: string[]
+    status: Core.DashboardStatus
   }
 }

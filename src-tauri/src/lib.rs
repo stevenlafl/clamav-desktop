@@ -33,6 +33,7 @@ pub fn run() {
             copilot::commands::get_copilot_state,
             copilot::commands::start_copilot_checklist,
             dashboard::commands::get_dashboard_state,
+            dashboard::commands::get_history,
             dashboard::commands::start_daemon,
             dashboard::commands::stop_daemon,
             modules::cloud::commands::check_cloud_update,

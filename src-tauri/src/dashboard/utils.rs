@@ -12,7 +12,7 @@ pub fn get_service_status() -> (state::DashboardStatus, Vec<String>) {
         let output = Command::new("systemctl")
             .arg("--no-pager")
             .arg("status")
-            .arg("clamav-daemon")
+            .arg("clamav-desktop-daemon")
             .output()
             .expect("Failed to retrieve systemctl status");
 
